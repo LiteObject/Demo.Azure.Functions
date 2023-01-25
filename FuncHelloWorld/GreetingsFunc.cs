@@ -9,14 +9,23 @@ using System.Threading.Tasks;
 
 namespace FuncHelloWorld
 {
-    public static class GreetingsFunc
+    public class GreetingsFunc
     {
-        [FunctionName("GreetingsFunc")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+
+        private readonly ILogger<GreetingsFunc> _logger;
+
+        public GreetingsFunc(ILogger<GreetingsFunc> logger)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            _logger = logger;
+            _logger.LogInformation($">>> Instantiated {nameof(GreetingsFunc)}");
+        }
+
+        [FunctionName("GreetingsFunc")]
+        public async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req
+            /*,ILogger log*/)
+        {
+            _logger.LogInformation("C# HTTP trigger function processed a request.");
 
             string name = req.Query["name"];
 

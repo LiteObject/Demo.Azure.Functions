@@ -1,5 +1,8 @@
 ﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using System;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+using System.IO;
 
 [assembly: FunctionsStartup(typeof(FuncHelloWorld.Startup))]
 namespace FuncHelloWorld
@@ -8,31 +11,43 @@ namespace FuncHelloWorld
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            Console.WriteLine(">>> HERE");
+            IConfiguration appConfig = builder.GetContext().Configuration;
 
-            /*Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                .MinimumLevel.Override("Worker", LogEventLevel.Warning)
-                .MinimumLevel.Override("Host", LogEventLevel.Warning)
-                .MinimumLevel.Override("System", LogEventLevel.Error)
-                .MinimumLevel.Override("Function", LogEventLevel.Error)
-                .MinimumLevel.Override("Azure.Storage.Blobs", LogEventLevel.Error)
-                .MinimumLevel.Override("Azure.Core", LogEventLevel.Error)
-                .Enrich.WithProperty("Application", "Comatic.KrediScan.AzureFunctions")
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(appConfig, sectionName: "Serilog")
+                /*.MinimumLevel.Information()
                 .Enrich.FromLogContext()
-                .WriteTo.DatadogLogs("XXXXXXXXXXX", configuration: new DatadogConfiguration() { Url = "https://http-intake.logs.datadoghq.eu" }, logLevel: LogEventLevel.Debug)
+                .WriteTo.DatadogLogs("<API_KEY>",
+                    configuration: new DatadogConfiguration()
+                    {
+                        Url = "https://http-intake.logs.datadoghq.com"
+                    },
+                    logLevel: LogEventLevel.Debug,
+                    service: "mx-local-svc",
+                    host: "mx-local-host"
+                    )
                 .WriteTo.Console()
+                .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day) */
                 .CreateLogger();
 
-            builder.Services.AddSingleton<ILoggerProvider>(sp => new SerilogLoggerProvider(Log.Logger, true));
+            //builder.Services.AddSingleton<ILoggerProvider>(sp => new SerilogLoggerProvider(Log.Logger, true));
 
-            builder.Services.AddLogging(lb =>
+            _ = builder?.Services.AddLogging(lb =>
             {
-                //lb.ClearProviders(); //--> if used nothing works...
-                lb.AddSerilog(Log.Logger, true);
-            }); */
+                //lb.ClearProviders();
+                _ = lb.AddSerilog(Log.Logger, true);
+            });
 
+        }
 
+        public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)
+        {
+            FunctionsHostBuilderContext context = builder.GetContext();
+
+            _ = builder?.ConfigurationBuilder
+                .AddJsonFile(Path.Combine(context.ApplicationRootPath, "appsettings.json"), optional: true, reloadOnChange: false)
+                // .AddJsonFile(Path.Combine(context.ApplicationRootPath, $"appsettings.{context.EnvironmentName}.json"), optional: true, reloadOnChange: false)
+                .AddEnvironmentVariables();
         }
     }
 }
